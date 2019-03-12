@@ -20,7 +20,7 @@ fn main(){
   	//let mut plane3 = plane::new(Vector3::new(0.0,0.0,3.0),Vector3::new(0.0, 1.0, 0.0),Vector3::new(-1.0,0.0,0.0),5.0,5.0);
 
   	let local_pt = Vector3::new(10.0,1.0,2.0);
-   	println!("local point on plane {}", local_pt);
+   	println!("local point in plane coordinates {}", local_pt);
 
   	println!("Point lies inside the bounds of plane? {:?}", plane1.is_inside(local_pt));
 
