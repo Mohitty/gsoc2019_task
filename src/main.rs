@@ -9,12 +9,12 @@ fn main(){
 
 	// Plane definition: 
 	//arguments = (1) center of plane, (2) local x axis, 
-	//			  (3) local y axis, (4) dimension along local x axis,
-	//			  (5) dimension along local y axis.
+	//	      (3) local y axis, (4) dimension along local x axis,
+	//	      (5) dimension along local y axis.
   	let plane1 = Plane::new(Vector3::new(0.0,0.0,1.0),
-  							Vector3::new(1.0, 0.0, 0.0),
-  							Vector3::new(0.0,1.0,0.0),
-  							5.0, 5.0);
+  				Vector3::new(1.0, 0.0, 0.0),
+  				Vector3::new(0.0,1.0,0.0),
+  				5.0, 5.0);
 
   	//let mut plane2 = plane::new(Vector3::new(0.0,0.0,2.0),Vector3::new(0.707,0.707,0.0),Vector3::new(-0.707,0.707,0.0),5.0,5.0);
   	//let mut plane3 = plane::new(Vector3::new(0.0,0.0,3.0),Vector3::new(0.0, 1.0, 0.0),Vector3::new(-1.0,0.0,0.0),5.0,5.0);
