@@ -33,8 +33,8 @@ impl BoundCheck for RectangularBounds {
 
 //Definition of Plane
 //Fields: (1) Center of the Plane.
-//		  (2) Transformation Matrix for switching coordinate systems.
-//		  (3) Bounds of the Plane.
+//	  (2) Transformation Matrix for switching coordinate systems.
+//	  (3) Bounds of the Plane.
 pub struct Plane {
 	pub plane_center: PlaneCenter,
 	pub rot_matrix: LocalToGlobal,
@@ -44,13 +44,13 @@ pub struct Plane {
 impl Plane {
 	//Constructs a new Plane.
 	//Arguments: (1) PlaneCenter
-	//			 (2) Plane Local X axis
-	//			 (3) Plane Local Y axis
-	//			 (4) Plane Bounds
+	//	     (2) Plane Local X axis
+	//	     (3) Plane Local Y axis
+	//	     (4) Plane Bounds
 	pub fn new(center: PlaneCenter,
-			diru: PlaneLocalAxis,
-			dirv: PlaneLocalAxis,
-			bounds: RectangularBounds) -> Plane {
+		   diru: PlaneLocalAxis,
+		   dirv: PlaneLocalAxis,
+		   bounds: RectangularBounds) -> Plane {
 
 		let mut dirz = *(&diru.cross(&dirv));
 		dirz.normalize_mut();
@@ -93,9 +93,9 @@ mod test {
 	fn test_local_to_global() {
 		let bounds = RectangularBounds{width: 5.0, height: 5.0};
 		let plane =  Plane::new(Vector3::new(0.0,0.0,1.0),			//Plane center
-								Vector3::new(1.0, 0.0, 0.0),		//Local X axis
-								Vector3::new(0.0,1.0,0.0),			//Local Y axis
-								bounds);
+					Vector3::new(1.0, 0.0, 0.0),			//Local X axis
+					Vector3::new(0.0,1.0,0.0),			//Local Y axis
+					bounds);
 		let local_pt = Vector3::new(1.0,1.0,0.0);
 		let global_point = plane.local_to_global(local_pt);
 		assert_eq!(global_point, Vector3::new(1.0,1.0,1.0));
@@ -105,9 +105,9 @@ mod test {
 	fn test_global_to_local() {
 		let bounds = RectangularBounds{width: 5.0, height: 5.0};
 		let plane =  Plane::new(Vector3::new(0.0,0.0,1.0),			//Plane center
-								Vector3::new(1.0, 0.0, 0.0),		//Local X axis
-								Vector3::new(0.0,1.0,0.0),			//Local Y axis
-								bounds);
+					Vector3::new(1.0, 0.0, 0.0),			//Local X axis
+					Vector3::new(0.0,1.0,0.0),			//Local Y axis
+					bounds);
 		let global_pt = Vector3::new(1.0,1.0,1.0);
 		let local_point = plane.global_to_local(global_pt);
 		assert_eq!(local_point, Vector3::new(1.0,1.0,0.0));
@@ -117,9 +117,9 @@ mod test {
 	fn test_is_inside() {
 		let bounds = RectangularBounds{width: 5.0, height: 5.0};
 		let plane =  Plane::new(Vector3::new(0.0,0.0,1.0),			//Plane center
-								Vector3::new(1.0, 0.0, 0.0),		//Local X axis
-								Vector3::new(0.0,1.0,0.0),			//Local Y axis
-								bounds);
+					Vector3::new(1.0, 0.0, 0.0),			//Local X axis
+					Vector3::new(0.0,1.0,0.0),			//Local Y axis
+					bounds);
 		
 		let mut global_pt = Vector3::new(1.0,1.0,1.0);
 		assert_eq!(plane.is_inside(global_pt), true);
