@@ -1,75 +1,133 @@
 extern crate nalgebra;
 
-use nalgebra::{Vector3, Matrix3, Real};
+use nalgebra::*;
 
-pub struct Plane {
-	pub plane_center: Vector3<f32>,
-	pub rot_matrix: Matrix3<f32>,
-	pub width: f32,
-	pub height: f32
+pub type PlaneCenter = Vector3<f32>;
+pub type PlaneLocalAxis = Vector3<f32>;
+pub type LocalToGlobal = Matrix3<f32>;
+pub type GlobalPoint = Vector3<f32>;
+pub type LocalPoint = Vector3<f32>;
+pub type DimesionU = f32;
+pub type DimesionV = f32;
+
+//This can be implemented for generic plane shapes.
+pub trait BoundCheck {
+	fn inside_bounds(&self, point: LocalPoint) -> bool;
 }
 
-impl Plane {
-	pub fn new(center: Vector3<f32>, diru: Vector3<f32>, dirv: Vector3<f32>, width: f32, height: f32) -> Plane {
-		let x = diru.y * dirv.z - diru.z * dirv.y;
-		let y = diru.z * dirv.x - diru.x * dirv.z;
-		let z = diru.x * dirv.y - diru.y * dirv.x;
+pub struct RectangularBounds {
+	pub width: DimesionU,
+	pub height: DimesionV
+}
 
-		let mut dirz = Vector3::new(x,y,z);
-		dirz.normalize_mut();
-
-		let m = Matrix3::from_columns(&[diru, dirv,dirz]);
-
-		Plane {
-			plane_center: center,
-			rot_matrix: m,
-			width: width,
-			height: height,
-		}
-	}
-
-	pub fn local_to_global(&self, point: Vector3<f32>) -> Vector3<f32> {
-		self.plane_center + self.rot_matrix*point
-	}
-
-	pub fn global_to_local(&self, point: Vector3<f32>) -> Vector3<f32> {
-		let inv = inversematrix(&self.rot_matrix);
-		inv*(point-self.plane_center)
-	}
-
-	pub fn is_inside(&self, point: Vector3<f32>) -> bool {
-		let local_point = self.global_to_local(point);
-		if local_point.z == 0.0 && Real::abs(local_point.x) <= (self.width/2.0) && Real::abs(local_point.y) <= (self.height/2.0) {
+impl BoundCheck for RectangularBounds {
+	fn inside_bounds(&self, point: LocalPoint) -> bool {
+		if Real::abs(point.x) <= (self.width/2.0) && 
+		   Real::abs(point.y) <= (self.height/2.0) {
 			return true;
-		} else {
+		} else {		
 			return false;
 		}
 	}
 }
 
-pub fn inversematrix(m: &Matrix3<f32>) -> Matrix3<f32> {
+//Definition of Plane
+//Fields: (1) Center of the Plane.
+//		  (2) Transformation Matrix for switching coordinate systems.
+//		  (3) Bounds of the Plane.
+pub struct Plane {
+	pub plane_center: PlaneCenter,
+	pub rot_matrix: LocalToGlobal,
+	pub bounds: RectangularBounds
+}
 
-	let det: f32 = m[(0,0)]*(m[(1,1)]*m[(2,2)]-m[(2,1)]*m[(1,2)]) -
-				  m[(0,1)]*(m[(1,0)]*m[(2,2)]-m[(2,0)]*m[(1,2)]) +
-				  m[(0,2)]*(m[(1,0)]*m[(2,1)]-m[(2,0)]*m[(1,1)]);
+impl Plane {
+	//Constructs a new Plane.
+	//Arguments: (1) PlaneCenter
+	//			 (2) Plane Local X axis
+	//			 (3) Plane Local Y axis
+	//			 (4) Plane Bounds
+	pub fn new(center: PlaneCenter,
+			diru: PlaneLocalAxis,
+			dirv: PlaneLocalAxis,
+			bounds: RectangularBounds) -> Plane {
 
-	let mut r1 = det*(m[(1,1)]*m[(2,2)] - m[(2,1)]*m[(1,2)]);
-	let mut r2 = det*(m[(1,2)]*m[(2,0)] - m[(1,0)]*m[(2,2)]);
-	let mut r3 = det*(m[(1,0)]*m[(2,1)] - m[(2,0)]*m[(1,1)]);
+		let mut dirz = *(&diru.cross(&dirv));
+		dirz.normalize_mut();
+				
+		Plane {
+			plane_center: center,
+			rot_matrix: Matrix3::from_columns(&[diru, dirv,dirz]),
+			bounds: bounds,
+		}
+	}
 
-	let v1 = Vector3::new(r1,r2,r3);
+	//Converts a Point in Plane's local frame to global coordinate frame.
+	pub fn local_to_global(&self, point: LocalPoint) -> Vector3<f32> {
+		self.plane_center + self.rot_matrix*point
+	}
 
-	r1 = det*(m[(0,2)]*m[(2,1)] - m[(0,1)]*m[(2,2)]);
-	r2 = det*(m[(0,0)]*m[(2,2)] - m[(0,2)]*m[(2,0)]);
-	r3 = det*(m[(2,0)]*m[(0,1)] - m[(0,0)]*m[(2,1)]);
+	//Converts a Point in Global frame to Plane's Local coordinate frame.
+	pub fn global_to_local(&self, point: GlobalPoint) -> Vector3<f32> {
+		let inv = &self.rot_matrix.try_inverse().unwrap();
+		inv*(point-self.plane_center)
+	}
 
-	let v2 = Vector3::new(r1,r2,r3);
+	//Checks if the given Point(Global coordinates) lies on the plane or not.
+	//For local points it can be checked directly by calling inside_bounds().
+	pub fn is_inside(&self, point: GlobalPoint) -> bool {
+		let local_point = self.global_to_local(point);
+		if local_point.z == 0.0 {
+			return self.bounds.inside_bounds(local_point);
+		} else {		
+			return false;
+		}
+	}
+}
 
-	r1 = det*(m[(0,1)]*m[(1,2)] - m[(0,2)]*m[(1,1)]);
-	r2 = det*(m[(1,0)]*m[(0,2)] - m[(0,0)]*m[(1,2)]);
-	r3 = det*(m[(0,0)]*m[(1,1)] - m[(1,0)]*m[(0,1)]);
+#[cfg(test)]
+mod test {
+	use super::*;
 
-	let v3 = Vector3::new(r1,r2,r3);
+	#[test]
+	fn test_local_to_global() {
+		let bounds = RectangularBounds{width: 5.0, height: 5.0};
+		let plane =  Plane::new(Vector3::new(0.0,0.0,1.0),			//Plane center
+								Vector3::new(1.0, 0.0, 0.0),		//Local X axis
+								Vector3::new(0.0,1.0,0.0),			//Local Y axis
+								bounds);
+		let local_pt = Vector3::new(1.0,1.0,0.0);
+		let global_point = plane.local_to_global(local_pt);
+		assert_eq!(global_point, Vector3::new(1.0,1.0,1.0));
+	}
 
-	Matrix3::from_columns(&[v1,v2,v3])
+	#[test]
+	fn test_global_to_local() {
+		let bounds = RectangularBounds{width: 5.0, height: 5.0};
+		let plane =  Plane::new(Vector3::new(0.0,0.0,1.0),			//Plane center
+								Vector3::new(1.0, 0.0, 0.0),		//Local X axis
+								Vector3::new(0.0,1.0,0.0),			//Local Y axis
+								bounds);
+		let global_pt = Vector3::new(1.0,1.0,1.0);
+		let local_point = plane.global_to_local(global_pt);
+		assert_eq!(local_point, Vector3::new(1.0,1.0,0.0));
+	}
+
+	#[test]
+	fn test_is_inside() {
+		let bounds = RectangularBounds{width: 5.0, height: 5.0};
+		let plane =  Plane::new(Vector3::new(0.0,0.0,1.0),			//Plane center
+								Vector3::new(1.0, 0.0, 0.0),		//Local X axis
+								Vector3::new(0.0,1.0,0.0),			//Local Y axis
+								bounds);
+		
+		let mut global_pt = Vector3::new(1.0,1.0,1.0);
+		assert_eq!(plane.is_inside(global_pt), true);
+		
+		global_pt = Vector3::new(1.0,1.0,2.0);
+		assert_eq!(plane.is_inside(global_pt), false);
+
+		global_pt = Vector3::new(-10.0,1.0,1.0);
+		assert_eq!(plane.is_inside(global_pt), false);
+	}
 }
