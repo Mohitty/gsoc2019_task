@@ -2,13 +2,10 @@ extern crate nalgebra;
 
 use nalgebra::*;
 
-pub type PlaneCenter = Vector3<f32>;
-pub type PlaneLocalAxis = Vector3<f32>;
-pub type LocalToGlobal = Matrix3<f32>;
-pub type GlobalPoint = Vector3<f32>;
-pub type LocalPoint = Vector3<f32>;
-pub type DimesionU = f32;
-pub type DimesionV = f32;
+pub type AffineTransformation = Transform3<f32>;
+pub type GlobalPoint = Point3<f32>;
+pub type LocalPoint = Point3<f32>;
+pub type BoundDimesion = f32;
 
 //This can be implemented for generic plane shapes.
 pub trait BoundCheck {
@@ -16,8 +13,8 @@ pub trait BoundCheck {
 }
 
 pub struct RectangularBounds {
-	pub width: DimesionU,
-	pub height: DimesionV
+	pub width: BoundDimesion,
+	pub height: BoundDimesion
 }
 
 impl BoundCheck for RectangularBounds {
@@ -32,45 +29,40 @@ impl BoundCheck for RectangularBounds {
 }
 
 //Definition of Plane
-//Fields: (1) Center of the Plane.
-//		  (2) Transformation Matrix for switching coordinate systems.
+//Fields: (1) Transformation matrix for changing from local to global
+//		  (2) Transformation Matrix ffor changing from global to local.
 //		  (3) Bounds of the Plane.
 pub struct Plane {
-	pub plane_center: PlaneCenter,
-	pub rot_matrix: LocalToGlobal,
+	pub transformation: AffineTransformation,
+	pub inv_transformation: AffineTransformation,
 	pub bounds: RectangularBounds
 }
 
 impl Plane {
 	//Constructs a new Plane.
-	//Arguments: (1) PlaneCenter
-	//			 (2) Plane Local X axis
-	//			 (3) Plane Local Y axis
+	//Arguments: (1) Affine Transform
 	//			 (4) Plane Bounds
-	pub fn new(center: PlaneCenter,
-			diru: PlaneLocalAxis,
-			dirv: PlaneLocalAxis,
+	pub fn new(transform: AffineTransformation,
 			bounds: RectangularBounds) -> Plane {
 
-		let mut dirz = *(&diru.cross(&dirv));
-		dirz.normalize_mut();
-				
+		let mut inv_t = transform;
+		inv_t.try_inverse_mut();
+
 		Plane {
-			plane_center: center,
-			rot_matrix: Matrix3::from_columns(&[diru, dirv,dirz]),
+			transformation: transform,
+			inv_transformation: inv_t,
 			bounds: bounds,
 		}
 	}
 
 	//Converts a Point in Plane's local frame to global coordinate frame.
-	pub fn local_to_global(&self, point: LocalPoint) -> Vector3<f32> {
-		self.plane_center + self.rot_matrix*point
+	pub fn local_to_global(&self, point: LocalPoint) -> Point3<f32> {
+		self.transformation*point
 	}
 
 	//Converts a Point in Global frame to Plane's Local coordinate frame.
-	pub fn global_to_local(&self, point: GlobalPoint) -> Vector3<f32> {
-		let inv = &self.rot_matrix.try_inverse().unwrap();
-		inv*(point-self.plane_center)
+	pub fn global_to_local(&self, point: GlobalPoint) -> Point3<f32> {
+		self.inv_transformation*point
 	}
 
 	//Checks if the given Point(Global coordinates) lies on the plane or not.
@@ -91,43 +83,55 @@ mod test {
 
 	#[test]
 	fn test_local_to_global() {
-		let bounds = RectangularBounds{width: 5.0, height: 5.0};
-		let plane =  Plane::new(Vector3::new(0.0,0.0,1.0),			//Plane center
-								Vector3::new(1.0, 0.0, 0.0),		//Local X axis
-								Vector3::new(0.0,1.0,0.0),			//Local Y axis
-								bounds);
-		let local_pt = Vector3::new(1.0,1.0,0.0);
+	    let bounds = RectangularBounds{width: 5.0, height: 5.0};
+
+	    let m = Matrix4::new(1.0,0.0,0.0,0.0,
+	                         0.0,1.0,0.0,0.0,
+	                         0.0,0.0,1.0,1.0,
+	                         0.0,0.0,0.0,1.0);
+	    let t :Transform3<f32> = Transform3::from_matrix_unchecked(m);
+
+	    let plane1 = Plane::new(t,bounds);
+		let local_pt = Point3::new(1.0,1.0,0.0);
 		let global_point = plane.local_to_global(local_pt);
 		assert_eq!(global_point, Vector3::new(1.0,1.0,1.0));
 	}
 
 	#[test]
 	fn test_global_to_local() {
-		let bounds = RectangularBounds{width: 5.0, height: 5.0};
-		let plane =  Plane::new(Vector3::new(0.0,0.0,1.0),			//Plane center
-								Vector3::new(1.0, 0.0, 0.0),		//Local X axis
-								Vector3::new(0.0,1.0,0.0),			//Local Y axis
-								bounds);
-		let global_pt = Vector3::new(1.0,1.0,1.0);
+	    let bounds = RectangularBounds{width: 5.0, height: 5.0};
+
+	    let m = Matrix4::new(1.0,0.0,0.0,0.0,
+	                         0.0,1.0,0.0,0.0,
+	                         0.0,0.0,1.0,1.0,
+	                         0.0,0.0,0.0,1.0);
+	    let t :Transform3<f32> = Transform3::from_matrix_unchecked(m);
+
+	    let plane1 = Plane::new(t,bounds);
+		let global_pt = Point3::new(1.0,1.0,1.0);
 		let local_point = plane.global_to_local(global_pt);
 		assert_eq!(local_point, Vector3::new(1.0,1.0,0.0));
 	}
 
 	#[test]
 	fn test_is_inside() {
-		let bounds = RectangularBounds{width: 5.0, height: 5.0};
-		let plane =  Plane::new(Vector3::new(0.0,0.0,1.0),			//Plane center
-								Vector3::new(1.0, 0.0, 0.0),		//Local X axis
-								Vector3::new(0.0,1.0,0.0),			//Local Y axis
-								bounds);
+	    let bounds = RectangularBounds{width: 5.0, height: 5.0};
+
+	    let m = Matrix4::new(1.0,0.0,0.0,0.0,
+	                         0.0,1.0,0.0,0.0,
+	                         0.0,0.0,1.0,1.0,
+	                         0.0,0.0,0.0,1.0);
+	    let t :Transform3<f32> = Transform3::from_matrix_unchecked(m);
+
+	    let plane1 = Plane::new(t,bounds);
 		
-		let mut global_pt = Vector3::new(1.0,1.0,1.0);
+		let mut global_pt = Point3::new(1.0,1.0,1.0);
 		assert_eq!(plane.is_inside(global_pt), true);
 		
-		global_pt = Vector3::new(1.0,1.0,2.0);
+		global_pt = Point3::new(1.0,1.0,2.0);
 		assert_eq!(plane.is_inside(global_pt), false);
 
-		global_pt = Vector3::new(-10.0,1.0,1.0);
+		global_pt = Point3::new(-10.0,1.0,1.0);
 		assert_eq!(plane.is_inside(global_pt), false);
 	}
 }
