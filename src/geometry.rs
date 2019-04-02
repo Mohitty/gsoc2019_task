@@ -41,7 +41,7 @@ pub struct Plane {
 impl Plane {
 	//Constructs a new Plane.
 	//Arguments: (1) Affine Transform
-	//			 (4) Plane Bounds
+	//	     (2) Plane Bounds
 	pub fn new(transform: AffineTransformation,
 			bounds: RectangularBounds) -> Plane {
 
