@@ -91,7 +91,7 @@ mod test {
 	                         0.0,0.0,0.0,1.0);
 	    let t :Transform3<f32> = Transform3::from_matrix_unchecked(m);
 
-	    let plane1 = Plane::new(t,bounds);
+	    let plane = Plane::new(t,bounds);
 		let local_pt = Point3::new(1.0,1.0,0.0);
 		
 		let global_point = plane.local_to_global(local_pt);
@@ -108,7 +108,7 @@ mod test {
 	                         0.0,0.0,0.0,1.0);
 	    let t :Transform3<f32> = Transform3::from_matrix_unchecked(m);
 
-	    let plane1 = Plane::new(t,bounds);
+	    let plane = Plane::new(t,bounds);
 		let global_pt = Point3::new(1.0,1.0,1.0);
 
 		let local_point = plane.global_to_local(global_pt);
@@ -125,7 +125,7 @@ mod test {
 	                         0.0,0.0,0.0,1.0);
 	    let t :Transform3<f32> = Transform3::from_matrix_unchecked(m);
 
-	    let plane1 = Plane::new(t,bounds);
+	    let plane = Plane::new(t,bounds);
 		
 		let mut global_pt = Point3::new(1.0,1.0,1.0);
 		assert_eq!(plane.is_inside(global_pt), true);
