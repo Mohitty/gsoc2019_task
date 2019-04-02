@@ -93,6 +93,7 @@ mod test {
 
 	    let plane1 = Plane::new(t,bounds);
 		let local_pt = Point3::new(1.0,1.0,0.0);
+		
 		let global_point = plane.local_to_global(local_pt);
 		assert_eq!(global_point, Vector3::new(1.0,1.0,1.0));
 	}
@@ -109,6 +110,7 @@ mod test {
 
 	    let plane1 = Plane::new(t,bounds);
 		let global_pt = Point3::new(1.0,1.0,1.0);
+
 		let local_point = plane.global_to_local(global_pt);
 		assert_eq!(local_point, Vector3::new(1.0,1.0,0.0));
 	}
